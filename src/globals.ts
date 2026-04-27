@@ -43,7 +43,21 @@ export const MAX_CONCURRENT_TASKS = process.env.MAX_CONCURRENT_TASKS ? parseInt(
 export const USER_AGENT = process.env.USER_AGENT
   || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
-export const FACEBOOK_APIFY_TOKEN = process.env.FACEBOOK_APIFY_TOKEN;
+/**
+ * Apify API token used by paid scrape backends (Kijiji-Apify, optionally FB).
+ * Falls back to FACEBOOK_APIFY_TOKEN for backwards-compat with the original
+ * Facebook stub.
+ */
+export const APIFY_TOKEN = process.env.APIFY_TOKEN || process.env.FACEBOOK_APIFY_TOKEN;
+export const FACEBOOK_APIFY_TOKEN = process.env.FACEBOOK_APIFY_TOKEN || process.env.APIFY_TOKEN;
+
+/**
+ * Which backend to use for the Kijiji source.
+ *   - "direct": HTML scrape (no per-call cost, brittle on server IPs)
+ *   - "apify":  Apify `memo23/kijiji-scraper` actor (paid, robust)
+ */
+export const KIJIJI_BACKEND: 'direct' | 'apify' =
+  (process.env.KIJIJI_BACKEND === 'apify' ? 'apify' : 'direct');
 
 const ALL_SOURCES: SourceName[] = ['craigslist', 'kijiji', 'facebook'];
 const enabledRaw = (process.env.ENABLED_SOURCES || 'craigslist,kijiji').toLowerCase();

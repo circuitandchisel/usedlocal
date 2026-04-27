@@ -1,13 +1,14 @@
 import type { Listing, ListingSource, SearchOptions, SearchResponse, SourceName } from './types.js';
-import { ENABLED_SOURCES, MAX_RESULTS_PER_SOURCE, SOURCE_TIMEOUT_MS } from './globals.js';
+import { ENABLED_SOURCES, KIJIJI_BACKEND, MAX_RESULTS_PER_SOURCE, SOURCE_TIMEOUT_MS } from './globals.js';
 import { craigslistSource } from './sources/craigslist.js';
 import { kijijiSource } from './sources/kijiji.js';
+import { kijijiApifySource } from './sources/kijiji-apify.js';
 import { facebookSource } from './sources/facebook.js';
 import { groupListings } from './dedup.js';
 
 const SOURCES: Record<SourceName, ListingSource> = {
   craigslist: craigslistSource,
-  kijiji: kijijiSource,
+  kijiji: KIJIJI_BACKEND === 'apify' ? kijijiApifySource : kijijiSource,
   facebook: facebookSource,
 };
 
