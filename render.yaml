@@ -29,6 +29,12 @@ services:
         sync: false
       - key: SOURCE_COST_FACEBOOK
         sync: false
+      - key: SOURCE_COST_EBAY
+        sync: false
+      - key: AMAZON_LOOKUP_COST
+        sync: false
+      - key: AMAZON_REFERENCE_LIMIT
+        sync: false
       - key: PRICING_MARGIN_MULTIPLIER
         sync: false
       - key: PRICING_MINIMUM_PRICE

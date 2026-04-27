@@ -1,4 +1,4 @@
-export type SourceName = 'craigslist' | 'kijiji' | 'facebook';
+export type SourceName = 'craigslist' | 'kijiji' | 'facebook' | 'ebay';
 
 export interface Listing {
   source: SourceName;
@@ -27,6 +27,33 @@ export interface ListingGroup {
   duplicates: Listing[];
   /** Number of distinct sources represented in this group. */
   sourceCount: number;
+  /**
+   * Cross-reference to the same item new on Amazon (only present when the
+   * caller passed `compareWithAmazon: true`). Use this to see whether the
+   * asking price on used listings is sane vs. the new-product market.
+   */
+  amazonReference?: AmazonReference;
+}
+
+export interface AmazonReference {
+  /** Title of the top Amazon result. */
+  title: string;
+  /** Public Amazon product URL (an /dp/<asin> link). */
+  url: string;
+  /** Listing price on Amazon in USD, if present. null when Amazon shows no fixed price (e.g. "currently unavailable"). */
+  price: number | null;
+  currency: string | null;
+  /** Image URL for the Amazon product, if present. */
+  imageUrl: string | null;
+  /**
+   * How confident we are that the Amazon result actually matches the used listing.
+   *   high   — title-token Jaccard ≥ 0.5
+   *   medium — title-token Jaccard ≥ 0.3
+   *   low    — anything less; treat the comparison with suspicion
+   */
+  confidence: 'high' | 'medium' | 'low';
+  /** Jaccard similarity between the used-listing title and the Amazon result title, [0,1]. */
+  titleSimilarity: number;
 }
 
 export interface SearchOptions {
@@ -43,6 +70,10 @@ export interface SearchOptions {
   timeoutMs?: number;
   /** Cap on raw listings per source before dedup. */
   maxPerSource?: number;
+  /** When true, attach an `amazonReference` to each ListingGroup. Off by default; raises the call price. */
+  compareWithAmazon?: boolean;
+  /** Cap on the number of groups we'll cross-reference against Amazon (top-N by source coverage). Default 25. */
+  amazonReferenceLimit?: number;
 }
 
 export interface SourceResult {

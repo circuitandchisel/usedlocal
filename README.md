@@ -35,11 +35,42 @@ The shape of the completed result is documented in
 - **Craigslist** — primary, scrapes the SSR HTML fallback (the JS-app's
   static-search markup). Reliable, cheap. Their `?format=rss` feed was
   retired in 2024.
-- **Kijiji** — best-effort: HTML fetch + parse of the embedded `__NEXT_DATA__`
-  blob. Surfaces a non-fatal error when Cloudflare challenges. Canada-only.
-- **Facebook Marketplace** — disabled by default. Requires
-  `FACEBOOK_APIFY_TOKEN` (proxies via the Apify FB Marketplace actor) since
-  the site itself requires authentication and runs strong anti-bot.
+- **Kijiji** — two backends. `KIJIJI_BACKEND=direct` (default) does an HTML
+  fetch + `__NEXT_DATA__` parse, free but flaky from server IPs.
+  `KIJIJI_BACKEND=apify` proxies through the `memo23/kijiji-scraper`
+  actor with residential proxies — robust, costs ~$0.05/search.
+  Canada-only either way.
+- **eBay** — Apify `kawsar/ebay-search-listing-scraper`, filtered to
+  `condition=used`. National rather than strictly local (eBay's actor
+  doesn't take a city filter), so it's most useful as a used-market
+  pricing signal alongside the geo-pinned sources.
+- **Facebook Marketplace** — disabled by default. Requires `APIFY_TOKEN`
+  (or legacy `FACEBOOK_APIFY_TOKEN`) since the site requires
+  authentication and runs strong anti-bot.
+
+## Amazon cross-reference
+
+Pass `compareWithAmazon: true` and each `ListingGroup` comes back with an
+`amazonReference` field:
+
+```ts
+amazonReference: {
+  title: string;
+  url: string;          // canonical /dp/<asin> link
+  price: number | null;
+  currency: 'USD' | null;
+  imageUrl: string | null;
+  confidence: 'high' | 'medium' | 'low';   // Jaccard similarity to listing title
+  titleSimilarity: number;                  // 0–1
+}
+```
+
+Driven by the Apify `damilo/amazon-search-scraper` actor (one lookup per
+group, capped at `AMAZON_REFERENCE_LIMIT`, default 25). The point: catch
+listings where the asking price is at-or-above the new-product market
+price. The agent client should treat `low`-confidence references with
+suspicion — Amazon's ranker may have surfaced a different product
+entirely.
 
 The `ListingSource` interface in [`src/types.ts`](src/types.ts) is the
 extension point. Switching Kijiji or Facebook to a paid scrape backend
@@ -75,12 +106,17 @@ automatically:
 | `craigslist` | `$0.001` | Direct HTTP fetch, effectively free. |
 | `kijiji` | `$0.05` | Budget for a paid scrape backend. |
 | `facebook` | `$0.20` | Budget for an Apify FB Marketplace actor run. |
+| `ebay` | `$0.30` | Budget for the Apify eBay search actor (~$6/1k results). |
+
+When `compareWithAmazon: true`, the price also includes
+`AMAZON_LOOKUP_COST × estimatedAmazonLookups` (default $0.01 × up to 25 = $0.25).
 
 Defaults: `PRICING_MARGIN_MULTIPLIER=1.25`, `PRICING_MINIMUM_PRICE=$0.02`.
 
-So a default `craigslist + kijiji` search charges ≈ `$0.064`; adding
-`facebook` brings it to ≈ `$0.314`. Override any of these via the env vars
-in [`env.example`](env.example).
+So a default `craigslist + kijiji + ebay` search charges ≈ `$0.439`;
+adding Amazon cross-reference brings it to ≈ `$0.751`; adding Facebook on
+top brings it to ≈ `$0.999`. Every knob is env-configurable — see
+[`env.example`](env.example).
 
 ## Local development
 

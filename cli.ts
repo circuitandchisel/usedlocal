@@ -31,7 +31,9 @@ program
   .requiredOption('-l, --location <location>', 'city / Craigslist subdomain (e.g. "Toronto", "sfbay")')
   .option('--min <n>', 'minimum price', (v) => parseInt(v, 10))
   .option('--max <n>', 'maximum price', (v) => parseInt(v, 10))
-  .option('-s, --sources <list>', 'comma-separated source list (craigslist,kijiji,facebook)')
+  .option('-s, --sources <list>', 'comma-separated source list (craigslist,kijiji,facebook,ebay)')
+  .option('--amazon', 'cross-reference each group against Amazon for "new product" pricing')
+  .option('--amazon-limit <n>', 'cap on Amazon cross-references (default 25)', (v) => parseInt(v, 10))
   .option('--json', 'emit raw JSON instead of a human summary')
   .option('--async', 'run through the Redis-backed task queue + worker (requires OAUTH_DB_REDIS_URL)')
   .action(async (keywords: string[], opts: any) => {
@@ -41,6 +43,8 @@ program
       minPrice: opts.min,
       maxPrice: opts.max,
       sources: opts.sources ? opts.sources.split(',').map((s: string) => s.trim()) : undefined,
+      compareWithAmazon: !!opts.amazon,
+      amazonReferenceLimit: opts.amazonLimit,
     };
 
     if (opts.async) {
@@ -72,8 +76,13 @@ async function runAsync(searchOptions: any, asJson: boolean) {
 
   try {
     const sources = searchOptions.sources?.length ? searchOptions.sources : ENABLED_SOURCES;
-    const price = calculateSearchPrice(sources);
-    console.log(`[cli-async] enqueueing task; would charge $${price.toFixed(4)} via ATXP for sources [${sources.join(',')}]`);
+    const price = calculateSearchPrice({
+      sources,
+      compareWithAmazon: searchOptions.compareWithAmazon,
+      estimatedAmazonLookups: searchOptions.amazonReferenceLimit,
+    });
+    const amazonTag = searchOptions.compareWithAmazon ? ' +amazon' : '';
+    console.log(`[cli-async] enqueueing task; would charge $${price.toFixed(4)} via ATXP for sources [${sources.join(',')}]${amazonTag}`);
 
     const taskId = await service.createTask('cli-test-account', searchOptions, sources, price);
     console.log(`[cli-async] taskId=${taskId}`);
@@ -124,6 +133,12 @@ function printResult(result: any) {
     console.log(`${price.padEnd(8)} ${g.primary.title}${tag}`);
     console.log(`         ${g.primary.url}`);
     for (const d of g.duplicates) console.log(`         ↳ ${d.source}: ${d.url}`);
+    if (g.amazonReference) {
+      const ar = g.amazonReference;
+      const arPrice = ar.price != null ? `$${ar.price}` : '—';
+      console.log(`         Amazon (${ar.confidence}, sim=${ar.titleSimilarity}): ${arPrice}  ${ar.title.slice(0, 60)}`);
+      console.log(`            ${ar.url}`);
+    }
   }
 }
 

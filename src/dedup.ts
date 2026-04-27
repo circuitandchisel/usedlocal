@@ -10,6 +10,11 @@ const STOPWORDS = new Set([
 export function titleTokens(title: string): Set<string> {
   const tokens = title
     .toLowerCase()
+    // Split letter-digit transitions so "DEWALT20V" → "dewalt 20v" — Amazon
+    // listings routinely concatenate brand + voltage, otherwise the brand
+    // token would never match against the original listing's "dewalt".
+    .replace(/([a-z])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-z])/g, '$1 $2')
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
     .filter((t) => t.length > 1 && !STOPWORDS.has(t));

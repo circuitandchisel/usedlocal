@@ -20,7 +20,24 @@ export const SOURCE_COSTS: Record<SourceName, number> = {
   craigslist: process.env.SOURCE_COST_CRAIGSLIST ? parseFloat(process.env.SOURCE_COST_CRAIGSLIST) : 0.001,
   kijiji: process.env.SOURCE_COST_KIJIJI ? parseFloat(process.env.SOURCE_COST_KIJIJI) : 0.05,
   facebook: process.env.SOURCE_COST_FACEBOOK ? parseFloat(process.env.SOURCE_COST_FACEBOOK) : 0.20,
+  // eBay is national (no city filter on the actor we use); broad coverage of
+  // the used market for a given keyword. ~$0.30 covers a 50-listing Apify run.
+  ebay: process.env.SOURCE_COST_EBAY ? parseFloat(process.env.SOURCE_COST_EBAY) : 0.30,
 };
+
+/**
+ * Per-group cost (USD) of cross-referencing a listing against Amazon for a
+ * "new on Amazon" price comparison. Charged only when the search tool is
+ * called with `compareWithAmazon: true`.
+ */
+export const AMAZON_LOOKUP_COST = process.env.AMAZON_LOOKUP_COST
+  ? parseFloat(process.env.AMAZON_LOOKUP_COST)
+  : 0.01;
+
+/** Cap on how many groups we'll cross-reference against Amazon per search. */
+export const AMAZON_REFERENCE_LIMIT = process.env.AMAZON_REFERENCE_LIMIT
+  ? parseInt(process.env.AMAZON_REFERENCE_LIMIT)
+  : 25;
 
 /** Markup on top of summed source costs (1.25 = 25% margin). */
 export const PRICING_MARGIN_MULTIPLIER = process.env.PRICING_MARGIN_MULTIPLIER
@@ -59,8 +76,8 @@ export const FACEBOOK_APIFY_TOKEN = process.env.FACEBOOK_APIFY_TOKEN || process.
 export const KIJIJI_BACKEND: 'direct' | 'apify' =
   (process.env.KIJIJI_BACKEND === 'apify' ? 'apify' : 'direct');
 
-const ALL_SOURCES: SourceName[] = ['craigslist', 'kijiji', 'facebook'];
-const enabledRaw = (process.env.ENABLED_SOURCES || 'craigslist,kijiji').toLowerCase();
+const ALL_SOURCES: SourceName[] = ['craigslist', 'kijiji', 'facebook', 'ebay'];
+const enabledRaw = (process.env.ENABLED_SOURCES || 'craigslist,kijiji,ebay').toLowerCase();
 export const ENABLED_SOURCES: SourceName[] = enabledRaw
   .split(',')
   .map(s => s.trim())
