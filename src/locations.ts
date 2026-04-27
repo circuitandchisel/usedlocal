@@ -17,6 +17,8 @@ interface ResolvedLocation {
   kijijiRegionId: string | null;
   /** Kijiji city slug for URL building, e.g. "city-of-toronto". null = "canada". */
   kijijiCitySlug: string | null;
+  /** Facebook Marketplace city slug, e.g. "toronto". null if no match found (callers can fall back to a slugified raw string). */
+  facebookMarketplaceSlug: string | null;
 }
 
 const CRAIGSLIST_SUBDOMAINS: Record<string, string> = {
@@ -59,6 +61,52 @@ const CRAIGSLIST_SUBDOMAINS: Record<string, string> = {
   'london': 'london',
   'paris': 'paris',
   'berlin': 'berlin',
+};
+
+/**
+ * Facebook Marketplace city slugs. Facebook builds search URLs as
+ *   facebook.com/marketplace/<slug>/search?query=...
+ * Most major cities have a stable slug. Unknown city → null; the source
+ * falls back to slugifying the raw string and lets FB's redirector handle it.
+ */
+const FACEBOOK_MARKETPLACE_SLUGS: Record<string, string> = {
+  'san francisco': 'sf',
+  'sf bay area': 'sf',
+  'san francisco bay area': 'sf',
+  'sfbay': 'sf',
+  'oakland': 'sf',
+  'berkeley': 'sf',
+  'new york': 'nyc',
+  'nyc': 'nyc',
+  'manhattan': 'nyc',
+  'brooklyn': 'nyc',
+  'los angeles': 'la',
+  'la': 'la',
+  'chicago': 'chicago',
+  'seattle': 'seattle',
+  'portland': 'portland',
+  'boston': 'boston',
+  'austin': 'austin',
+  'denver': 'denver',
+  'atlanta': 'atlanta',
+  'washington dc': 'dc',
+  'dc': 'dc',
+  'philadelphia': 'philadelphia',
+  'philly': 'philadelphia',
+  'san diego': 'sandiego',
+  'phoenix': 'phoenix',
+  'miami': 'miami',
+  'dallas': 'dallas',
+  'houston': 'houston',
+  'minneapolis': 'minneapolis',
+  'detroit': 'detroit',
+  'toronto': 'toronto',
+  'gta': 'toronto',
+  'vancouver': 'vancouver',
+  'montreal': 'montreal',
+  'calgary': 'calgary',
+  'ottawa': 'ottawa',
+  'edmonton': 'edmonton',
 };
 
 const KIJIJI_REGIONS: Record<string, { id: string; slug: string }> = {
@@ -124,10 +172,23 @@ export function resolveLocation(raw: string): ResolvedLocation {
     }
   }
 
+  // Facebook Marketplace: prefix-strategy lookup, same as the others.
+  let facebookMarketplaceSlug: string | null = null;
+  if (FACEBOOK_MARKETPLACE_SLUGS[norm]) {
+    facebookMarketplaceSlug = FACEBOOK_MARKETPLACE_SLUGS[norm];
+  } else {
+    const tokens = norm.split(' ');
+    for (let n = tokens.length; n >= 1 && !facebookMarketplaceSlug; n--) {
+      const prefix = tokens.slice(0, n).join(' ');
+      if (FACEBOOK_MARKETPLACE_SLUGS[prefix]) facebookMarketplaceSlug = FACEBOOK_MARKETPLACE_SLUGS[prefix];
+    }
+  }
+
   return {
     raw,
     craigslistSubdomain,
     kijijiRegionId: kijijiRegion?.id ?? null,
     kijijiCitySlug: kijijiRegion?.slug ?? null,
+    facebookMarketplaceSlug,
   };
 }

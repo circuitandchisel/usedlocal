@@ -19,7 +19,9 @@ if (!FUNDING_DESTINATION_ATXP) throw new Error('FUNDING_DESTINATION_ATXP is not 
 export const SOURCE_COSTS: Record<SourceName, number> = {
   craigslist: process.env.SOURCE_COST_CRAIGSLIST ? parseFloat(process.env.SOURCE_COST_CRAIGSLIST) : 0.001,
   kijiji: process.env.SOURCE_COST_KIJIJI ? parseFloat(process.env.SOURCE_COST_KIJIJI) : 0.05,
-  facebook: process.env.SOURCE_COST_FACEBOOK ? parseFloat(process.env.SOURCE_COST_FACEBOOK) : 0.20,
+  // FB Marketplace via apify/facebook-marketplace-scraper at $2.60/1k results,
+  // 50-listing cap → ~$0.13/call worst case, $0.15 leaves a small buffer.
+  facebook: process.env.SOURCE_COST_FACEBOOK ? parseFloat(process.env.SOURCE_COST_FACEBOOK) : 0.15,
   // eBay is national (no city filter on the actor we use); broad coverage of
   // the used market for a given keyword. ~$0.30 covers a 50-listing Apify run.
   ebay: process.env.SOURCE_COST_EBAY ? parseFloat(process.env.SOURCE_COST_EBAY) : 0.30,
