@@ -39,12 +39,17 @@ export const kijijiApifySource: ListingSource = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        startUrls: [{ url: startUrl }],
+        // memo23/kijiji-scraper expects plain URL strings, not Crawlee request
+        // objects — passing `[{url: "..."}]` causes a double-wrap inside the
+        // actor and the run fails with "url property is not a string".
+        startUrls: [startUrl],
         maxItems,
         proxy: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
       }),
-      // Apify run-sync can take a while; default 30s server-side timeout is too tight.
-      signal: AbortSignal.timeout(options.timeoutMs ?? 120_000),
+      // Apify run-sync routinely takes 30–120s (actor cold-start + scrape +
+      // residential proxy retries). Floor at 180s — the SOURCE_TIMEOUT_MS env
+      // default is sized for cheap HTTP fetches, not actor runs.
+      signal: AbortSignal.timeout(Math.max(options.timeoutMs ?? 0, 180_000)),
     });
 
     if (!res.ok) {
