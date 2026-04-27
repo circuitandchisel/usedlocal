@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: usedlocal
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /.well-known/oauth-protected-resource
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: usedlocal
+      - key: PORT
+        value: 10000
+      - key: NPM_TOKEN
+        sync: false
+      - key: FUNDING_DESTINATION_ATXP
+        sync: false
+      - key: SEARCH_COST
+        sync: false
+      - key: ENABLED_SOURCES
+        sync: false
+      - key: FACEBOOK_APIFY_TOKEN
+        sync: false
+      - key: OAUTH_DB_REDIS_URL
+        sync: false
+      - key: AUTHORIZATION_SERVER_URL
+        sync: false
+      - key: POSTHOG_API_KEY
+        sync: false

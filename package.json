@@ -1,0 +1,44 @@
+{
+  "name": "usedlocal",
+  "version": "0.1.0",
+  "description": "A Turtle MCP server that searches local used-goods marketplaces (Craigslist, Kijiji, Facebook Marketplace) and groups duplicate listings.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "heroku-postbuild": "npm run build",
+    "start": "node dist/index.js",
+    "dev": "tsx --watch src/index.ts",
+    "cli": "tsx cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:ui": "vitest --ui"
+  },
+  "bin": {
+    "usedlocal": "./cli.ts"
+  },
+  "dependencies": {
+    "@atxp/common": "^0.11.7",
+    "@atxp/express": "^0.11.7",
+    "@atxp/redis": "^0.11.7",
+    "@atxp/server": "^0.11.7",
+    "@longrun/observability": "^0.1.14",
+    "@longrun/turtle": "^0.2.7",
+    "bignumber.js": "^9.3.1",
+    "dotenv": "^17.2.3",
+    "express-rate-limit": "^8.2.1",
+    "zod": "^3.23.8"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "1.24.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.17",
+    "@vitest/ui": "^3.0.9",
+    "commander": "^14.0.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.9"
+  }
+}
