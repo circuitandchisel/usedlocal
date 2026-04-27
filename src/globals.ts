@@ -3,10 +3,39 @@ import type { SourceName } from './types.js';
 export const FUNDING_DESTINATION_ATXP = process.env.FUNDING_DESTINATION_ATXP;
 if (!FUNDING_DESTINATION_ATXP) throw new Error('FUNDING_DESTINATION_ATXP is not set');
 
-export const SEARCH_COST = process.env.SEARCH_COST ? parseFloat(process.env.SEARCH_COST) : 0.02;
+/**
+ * Per-source underlying API/scrape cost in USD.
+ *
+ * These are the values we use to derive the customer-facing price (see
+ * src/pricing.ts). Defaults assume realistic backends:
+ *   - Craigslist: direct HTTP, effectively free.
+ *   - Kijiji: routed through a paid scrape service (Apify/ScraperAPI/Playwright
+ *     proxy), conservative ~$0.05/search budget.
+ *   - Facebook Marketplace: Apify FB actor or equivalent, ~$0.20/search.
+ *
+ * Override any of these per env when you change a backend, and the price the
+ * tool charges via ATXP will track automatically.
+ */
+export const SOURCE_COSTS: Record<SourceName, number> = {
+  craigslist: process.env.SOURCE_COST_CRAIGSLIST ? parseFloat(process.env.SOURCE_COST_CRAIGSLIST) : 0.001,
+  kijiji: process.env.SOURCE_COST_KIJIJI ? parseFloat(process.env.SOURCE_COST_KIJIJI) : 0.05,
+  facebook: process.env.SOURCE_COST_FACEBOOK ? parseFloat(process.env.SOURCE_COST_FACEBOOK) : 0.20,
+};
 
-export const SOURCE_TIMEOUT_MS = process.env.SOURCE_TIMEOUT_MS ? parseInt(process.env.SOURCE_TIMEOUT_MS) : 15000;
+/** Markup on top of summed source costs (1.25 = 25% margin). */
+export const PRICING_MARGIN_MULTIPLIER = process.env.PRICING_MARGIN_MULTIPLIER
+  ? parseFloat(process.env.PRICING_MARGIN_MULTIPLIER)
+  : 1.25;
+
+/** Floor price per search in USD, regardless of which sources were requested. */
+export const PRICING_MINIMUM_PRICE = process.env.PRICING_MINIMUM_PRICE
+  ? parseFloat(process.env.PRICING_MINIMUM_PRICE)
+  : 0.02;
+
+export const SOURCE_TIMEOUT_MS = process.env.SOURCE_TIMEOUT_MS ? parseInt(process.env.SOURCE_TIMEOUT_MS) : 30000;
 export const MAX_RESULTS_PER_SOURCE = process.env.MAX_RESULTS_PER_SOURCE ? parseInt(process.env.MAX_RESULTS_PER_SOURCE) : 50;
+
+export const MAX_CONCURRENT_TASKS = process.env.MAX_CONCURRENT_TASKS ? parseInt(process.env.MAX_CONCURRENT_TASKS) : 3;
 
 // Many marketplaces (Craigslist, Kijiji) reject obvious bot UAs with 403.
 // Default to a recent desktop-Chrome UA; override with USER_AGENT to identify yourself

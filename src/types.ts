@@ -63,3 +63,19 @@ export interface SearchResponse {
   groups: ListingGroup[];
   totalListings: number;
 }
+
+export interface AsyncSearchTask {
+  taskId: string;
+  accountId: string;
+  options: SearchOptions;
+  /** Sources actually charged for at task-creation time (drives pricing). */
+  pricedSources: SourceName[];
+  /** Price charged in USD. Recorded for observability + audits. */
+  pricedAmountUsd: number;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  createdAt: number;
+  completedAt?: number;
+  result?: SearchResponse;
+  errorMessage?: string;
+  retryCount?: number;
+}

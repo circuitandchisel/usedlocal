@@ -19,13 +19,25 @@ services:
         sync: false
       - key: FUNDING_DESTINATION_ATXP
         sync: false
-      - key: SEARCH_COST
+      # Required: Redis for ATXP OAuth + async task queue.
+      - key: OAUTH_DB_REDIS_URL
+        sync: false
+      # Pricing knobs (optional; defaults in src/globals.ts):
+      - key: SOURCE_COST_CRAIGSLIST
+        sync: false
+      - key: SOURCE_COST_KIJIJI
+        sync: false
+      - key: SOURCE_COST_FACEBOOK
+        sync: false
+      - key: PRICING_MARGIN_MULTIPLIER
+        sync: false
+      - key: PRICING_MINIMUM_PRICE
         sync: false
       - key: ENABLED_SOURCES
         sync: false
       - key: FACEBOOK_APIFY_TOKEN
         sync: false
-      - key: OAUTH_DB_REDIS_URL
+      - key: MAX_CONCURRENT_TASKS
         sync: false
       - key: AUTHORIZATION_SERVER_URL
         sync: false

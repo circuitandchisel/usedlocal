@@ -9,7 +9,9 @@ import { RedisOAuthDb } from '@atxp/redis';
 import { BigNumber } from 'bignumber.js';
 import rateLimit from 'express-rate-limit';
 import type { Request, Response, NextFunction } from 'express';
-import { searchListingsTool } from './tools.js';
+import { searchAsyncTool, getAsyncTool, setAsyncSearchService } from './tools.js';
+import { AsyncSearchService } from './async-search.js';
+import { AsyncSearchWorker } from './worker.js';
 import { FUNDING_DESTINATION_ATXP } from './globals.js';
 
 const logger = new OpenTelemetryObservability(
@@ -27,30 +29,42 @@ function getAuthToken(req: Request): string | undefined {
   return undefined;
 }
 
+let worker: AsyncSearchWorker | null = null;
+
 export function run(port: number) {
   const posthog = getPostHogInstance();
   console.log(posthog ? 'PostHog analytics enabled' : 'PostHog analytics disabled (POSTHOG_API_KEY not set)');
 
-  let oAuthDb: RedisOAuthDb | undefined = undefined;
-  if (process.env.OAUTH_DB_REDIS_URL) {
-    oAuthDb = new RedisOAuthDb({
-      redis: process.env.OAUTH_DB_REDIS_URL,
-      keyPrefix: `atxp:oauth:${process.env.APP_NAME || 'usedlocal'}:${process.env.NODE_ENV || 'development'}:`,
-    });
+  // Async-only deployment: Redis is required for the task queue.
+  const redisUrl = process.env.OAUTH_DB_REDIS_URL;
+  if (!redisUrl) {
+    throw new Error('OAUTH_DB_REDIS_URL is required (used for both ATXP OAuth state and the async search task queue)');
   }
+
+  const oAuthDb = new RedisOAuthDb({
+    redis: redisUrl,
+    keyPrefix: `atxp:oauth:${process.env.APP_NAME || 'usedlocal'}:${process.env.NODE_ENV || 'development'}:`,
+  });
+
+  const taskKeyPrefix = `atxp:async-search:${process.env.APP_NAME || 'usedlocal'}:${process.env.NODE_ENV || 'development'}:`;
+  const asyncSearchService = new AsyncSearchService(redisUrl, taskKeyPrefix);
+  setAsyncSearchService(asyncSearchService);
+
+  worker = new AsyncSearchWorker(redisUrl, taskKeyPrefix);
+  worker.start();
 
   const serverArgs: ATXPArgs = {
     destination: new ATXPAccount(FUNDING_DESTINATION_ATXP!),
     payeeName: 'UsedLocal',
+    oAuthDb,
+    logger,
   };
   if (process.env.MINIMUM_PAYMENT) {
     serverArgs.minimumPayment = new BigNumber(process.env.MINIMUM_PAYMENT);
   }
-  if (oAuthDb) serverArgs.oAuthDb = oAuthDb;
   if (process.env.AUTHORIZATION_SERVER_URL) {
     serverArgs.server = process.env.AUTHORIZATION_SERVER_URL as UrlString;
   }
-  serverArgs.logger = logger;
 
   const skipWellKnown = (req: Request) => req.path.startsWith('/.well-known/');
 
@@ -86,7 +100,7 @@ export function run(port: number) {
   startHttpServer(
     port,
     [{
-      tools: [searchListingsTool],
+      tools: [searchAsyncTool, getAsyncTool],
       name: 'usedlocal',
       version: process.env.npm_package_version || '0.1.0',
       mountpath: '/',
@@ -96,8 +110,13 @@ export function run(port: number) {
     [ipLimiter, clientLimiter, atxpExpress(serverArgs)]
   );
 
-  process.on('SIGTERM', () => { console.log('Received SIGTERM, shutting down'); process.exit(0); });
-  process.on('SIGINT', () => { console.log('Received SIGINT, shutting down'); process.exit(0); });
+  const shutdown = (signal: string) => {
+    console.log(`Received ${signal}, shutting down`);
+    if (worker) worker.stop();
+    setTimeout(() => process.exit(0), 1000);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
