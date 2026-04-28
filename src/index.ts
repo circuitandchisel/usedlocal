@@ -1,7 +1,4 @@
-// IMPORTANT: Observability init MUST be the first import
-import '@longrun/observability/auto';
 import 'dotenv/config';
-import { OpenTelemetryObservability, LogLevel } from '@longrun/observability';
 import { startHttpServer, getPostHogInstance } from '@longrun/turtle';
 import { atxpExpress, ATXPArgs } from '@atxp/express';
 import { UrlString, ATXPAccount } from '@atxp/common';
@@ -14,9 +11,18 @@ import { AsyncSearchService } from './async-search.js';
 import { AsyncSearchWorker } from './worker.js';
 import { FUNDING_DESTINATION_ATXP } from './globals.js';
 
-const logger = new OpenTelemetryObservability(
-  process.env.LOG_LEVEL?.toLowerCase() === 'debug' ? LogLevel.DEBUG : LogLevel.INFO
-);
+// console-shim Logger for @atxp/express. (We previously used
+// @longrun/observability for OpenTelemetry tracing into Honeycomb; removed
+// because the published 0.x versions of that package returned 404 from npm
+// at deploy time — see commit history. Restore once the package is
+// republished; the import was a one-liner.)
+const isDebug = process.env.LOG_LEVEL?.toLowerCase() === 'debug';
+const logger = {
+  debug: (...args: any[]) => isDebug && console.debug(...args),
+  info:  (...args: any[]) => console.log(...args),
+  warn:  (...args: any[]) => console.warn(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 function getAuthToken(req: Request): string | undefined {
   const authHeader = req.headers.authorization;

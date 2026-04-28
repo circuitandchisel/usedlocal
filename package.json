@@ -23,7 +23,6 @@
     "@atxp/express": "^0.11.7",
     "@atxp/redis": "^0.11.7",
     "@atxp/server": "^0.11.7",
-    "@longrun/observability": "^0.1.14",
     "@longrun/turtle": "^0.2.7",
     "bignumber.js": "^9.3.1",
     "dotenv": "^17.2.3",
