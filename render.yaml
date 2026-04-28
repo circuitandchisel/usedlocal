@@ -9,47 +9,21 @@ services:
     healthCheckPath: /.well-known/oauth-protected-resource
     autoDeploy: true
     envVars:
-      - key: NODE_ENV
-        value: production
+      # Most secrets (FUNDING_DESTINATION_ATXP, OAUTH_DB_REDIS_URL, NPM_TOKEN,
+      # POSTHOG_API_KEY, NODE_ENV, …) come from the shared "MCP Servers
+      # Environment Vars" group, which other MCP services in the workspace
+      # also use. Adding/rotating a credential there propagates to every
+      # service that inherits the group.
+      - fromGroup: MCP Servers Environment Vars
+
+      # Service-specific overrides + tunable knobs. Any of the SOURCE_COST_* /
+      # AMAZON_* / PRICING_* knobs can be added here later to override defaults
+      # without a code deploy.
       - key: APP_NAME
         value: usedlocal
       - key: PORT
         value: 10000
-      - key: NPM_TOKEN
-        sync: false
-      - key: FUNDING_DESTINATION_ATXP
-        sync: false
-      # Required: Redis for ATXP OAuth + async task queue.
-      - key: OAUTH_DB_REDIS_URL
-        sync: false
-      # Pricing knobs (optional; defaults in src/globals.ts):
-      - key: SOURCE_COST_CRAIGSLIST
-        sync: false
-      - key: SOURCE_COST_KIJIJI
-        sync: false
-      - key: SOURCE_COST_FACEBOOK
-        sync: false
-      - key: SOURCE_COST_EBAY
-        sync: false
-      - key: AMAZON_LOOKUP_COST
-        sync: false
-      - key: AMAZON_REFERENCE_LIMIT
-        sync: false
-      - key: PRICING_MARGIN_MULTIPLIER
-        sync: false
-      - key: PRICING_MINIMUM_PRICE
-        sync: false
-      - key: ENABLED_SOURCES
-        sync: false
-      - key: APIFY_TOKEN
-        sync: false
       - key: KIJIJI_BACKEND
-        sync: false
-      - key: FACEBOOK_APIFY_TOKEN
-        sync: false
-      - key: MAX_CONCURRENT_TASKS
-        sync: false
-      - key: AUTHORIZATION_SERVER_URL
-        sync: false
-      - key: POSTHOG_API_KEY
-        sync: false
+        value: apify
+      - key: ENABLED_SOURCES
+        value: craigslist,kijiji,ebay,facebook
